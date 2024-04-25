@@ -355,6 +355,32 @@ mFit |> broom::glance()
 
 ### Plots Mod ----
 
+#### Item b ----
+mFit|>
+  ggplot2::ggplot(aes(x = height, y = rstudent(mFit)))+
+  geom_point(color = "#112446", shape = 1)+
+  geom_hline(yintercept = 0, linetype = 2, size = 0.2) +
+  geom_hline(yintercept = 2, linetype = 2, size = 0.2) +
+  geom_hline(yintercept = -2, linetype = 2, size = 0.2)+
+  labs(
+    title = "Gráfico de Resíduos Jacknife",
+    x = "Altura (m)",
+    y = "Resíduos Jacknife")+
+  scale_x_continuous(
+    breaks = seq(60, 90, 5),
+    labels = scales::number_format(
+      dig.mark = ".", decimal.mark = ","))+
+  scale_y_continuous(
+    breaks = seq(-3.5, 3, .5),
+    labels = scales::number_format(
+      dig.mark = ".", decimal.mark = ","))+
+  theme_classic()+
+  theme(
+    legend.position = "none",
+    # plot.title = element_text(size = 11, face = "bold"),
+    axis.title = element_text(size = 9, face = "plain"),
+    axis.line = element_line(size = 0.5, color = "#222222"))
+
 dados1 |> 
   ggplot(aes(x = height, y = volume)) +
   geom_point(shape = 1, size = 1.5, colour = "#112446") +
@@ -1224,7 +1250,7 @@ d2 + gridExtra::tableGrob(round(resultados,4))+plot_layout(ncol = 2)
 
 
 
-### KS ----
+##### KS ----
 
 ##### Teste de normalidade dos resíduos
 #H0: normalidade

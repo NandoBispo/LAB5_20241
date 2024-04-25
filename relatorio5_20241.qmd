@@ -5,7 +5,9 @@ format:
     pdf:
       toc: true
       toc-title: Sumário
-      mainfont: Calibri
+      # mainfont: Calibri
+      mainfont: Arial
+      fontsize: 12pt
       colorlinks: true
       documentclass: report
       papersize: letter
@@ -20,7 +22,6 @@ format:
       fig-align: center
       lang: pt-BR
       # fontfamily: libertinus
-      fontsize: 12pt
       include-in-header:
       - text: |
           \usepackage{caption}
@@ -39,7 +40,6 @@ format:
 #| warning: false
 
 if (!require(pacman)) install.packages("pacman")
-      # code-block-border-left: "#112446"
 
 pacman::p_load(tidyverse, janitor, summarytools, kableExtra, patchwork, ggpubr, glue, broom, lmtest)
 
@@ -48,10 +48,9 @@ summarytools::st_options(lang = "pt")
 ```
 
 
-
 # Introdução
 
-O laboratório desta semana visa a continuidade da aplicação das técnicas de Regressão Linear Simples com a aplicabilidade das técnicas de análise de resíduos e transformação de variáveis para a condição de quebra dos pressupostos do modelo.
+O laboratório desta semana visa a continuidade da aplicação das técnicas de Regressão Linear Simples - RLS com a aplicabilidade das técnicas de análise de resíduos e transformação de variáveis para a condição de quebra dos pressupostos do modelo.
 
 
 ```{r dados1}
@@ -84,16 +83,16 @@ dados1 <- dados1|>
 
 # Metodologia
 
-O conjunto de dados a ser analisado é denominado *trees*, disponível no pacote *datasets*, contém informações de 31 cerejeiras (*Black cherry*) da Floresta Nacional de Allegheny, relativas a três características numéricas contínuas:
+O conjunto de dados a ser analisado é denominado *trees*, disponível no pacote *datasets*, contém informações de 31 cerejeiras (*Black cherry*) da Floresta Nacional de Allegheny, relativas a três características numéricas contínuas que tiveram suas unidades de medidas convertidas do padrão americano para o Sistema Internacional - SI:
 
-- Volume de madeira útil (em metros cúbicos (m³)); 
-- Altura (em metros (m));
-- Circunferência (em metros(m)) a 1,37 de altura.
+- Volume de madeira útil (em metros cúbicos ($m^3$)); 
+- Altura (em metros ($m$));
+- Circunferência (em metros($m$)) a 1,37 de altura.
 
 Para esta atividade **serão considerados apenas as informações referentes ao volume e altura das árvores**. Com base nestes dados se desenvolverá:
 
 
-(a) Ajuste de modelo linear simples para volume como função da altura da árvore;
+(a) Ajuste de Modelo Regressão Linear Simples - MRLS para volume como função da altura da árvore;
 (b) Avalação gráfica dos resíduos Jacknife para diagnóstico do modelo ajustado;
 (c) Transformações da característrica utilizada como variável resposta do modelo;
 (d) Avaliação da transformação mais apropriada dentro da família proposta por Box e
@@ -104,49 +103,46 @@ Cox;
 # Resultados
 
 
-## Item a. Ajuste do Modelo
+## Item a: Ajuste do MRLS
 
 
-```{r fig1:dispersao+ajuste}
-#| echo: false
+```{r fig1:ajuste mod}
+#| echo: false #true
 #| warning: false
-#| fig-height: 4
-#| fig-width: 7
+#| fig-align: center
+#| fig-pos: H
+#| fig-height: 5
+#| fig-width: 6
 
 
-### Ajuste do Modelo + Gráfico ----
+# Ajuste do Modelo + Gráfico ----
 dados1|>
   ggplot(aes(x = height, y = volume)) +
-  geom_point(shape=1, color = "#234B6E")+
+  geom_point(shape=1, color = "#112446")+
+  ggpubr::stat_cor(aes(label = paste(..r.label.., ..rr.label.., sep = "~`; `~")),
+                   cor.coef.name = c("R"), label.sep = "; ", geom = "text", 
+                   color="red", method = "pearson", label.x = 19.2, 
+                   label.y = 2, show.legend = F, p.accuracy = 0.001, 
+                   r.accuracy = 0.0001, size = 3.5)+
+  ggpubr::stat_regline_equation(aes(
+    label = paste(..eq.label.., ..adj.rr.label.., sep = "~`; `~")),
+    geom = "text", label.x = 19.2, label.y = 1.75, position = "identity", 
+    color="red", size = 3.5, show.legend = F)+
+  geom_smooth(linewidth=0.5, method=lm, se=T, formula = "y ~ x", 
+              color = "red", fill="#69b3a2")+
   labs(
+    y = 'Volume (m³)', x = 'Altura (m)',
     title = "Figura 1: Modelo Ajustado entre Volume e Altura",
-    subtitle = "Diagrama de dispersão com equação da reta de regressão ajustada, \nCoeficiente de Correlação de Pearson, Coeficiente de Determinação, Coeficiente de \nDeterminação Ajustado, Reta de Regressão e Intervalo de Confiança",
-    y = 'Volume (m³)', x = 'Altura (m)'
+    subtitle = "Diagrama de dispersão com equação da reta de regressão ajustada",
+    caption = "OBS.: Para facilitar a interpretação estão inseridas as seguintes estimativas: \nCoeficiente de Correlação Linear de Pearson, Coeficiente de Determinação, \nCoeficiente de Determinação Ajustado, Reta de Regressão e Intervalo de Confiança."
   )+
-  ggpubr::stat_cor(
-    aes(label = paste(..r.label.., ..rr.label.., sep = "~`; `~")),
-    cor.coef.name = c("R"),
-    label.sep = "; ", geom = "text", color="tomato", method = "pearson",
-    label.x = 19.2, label.y = 2, show.legend = F,
-    p.accuracy = 0.001, r.accuracy = 0.0001, size = 3.5)+
-  ggpubr::stat_regline_equation(
-      aes(label = paste(..eq.label.., ..adj.rr.label.., sep = "~`; `~")),
-          geom = "text", label.x = 19.2, label.y = 1.75, 
-      position = "identity", 
-      color="tomato", size = 3.5, show.legend = F
-  )+
-  geom_smooth(
-    method=lm, se=T, formula = "y ~ x", color = "tomato")+
-  theme_minimal()+
   scale_x_continuous(breaks = seq(19,27,1))+
-  scale_y_continuous(
-  breaks = seq(0, 2.5, 0.5),
-    labels = scales::number_format(
-      big.mark = ".",
-      decimal.mark = ","
-    ))+
-    theme(legend.position = "none",
-          axis.line = element_line(size = 0.5, color = "#222222"))
+  scale_y_continuous(breaks = seq(0, 2.5, 0.5), 
+                     labels = scales::number_format(big.mark = ".", 
+                                                    decimal.mark = ","))+
+  theme_minimal()+
+  theme(legend.position = "none",
+        axis.line = element_line(size = 0.5, color = "#222222"))
 
 ## Modelo Ajustado
 mFit <- lm(volume~height, data = dados1)
@@ -154,326 +150,115 @@ mFit <- lm(volume~height, data = dados1)
 ```
 
 
-Com base na Figura 1 é possível sugerir uma relação positiva entre as variáveis **Volume** e **Altura**, fato confirmado pelo Coeficiente de Correlação de Pearson (*R = `r scales::number(cor(dados1$volume, dados1$height), accuracy = 0.001, big.mark = ".", decimal.mark = ",")`*) que após o teste de hipótese para avaliar a significância da correlação estimada, demonstrou **possuir correlação não nula**. A reta de regressão ajustada segue a seguinte equação:
+Com base na Figura 1 é possível identificar uma aparente relação positiva entre as variáveis **Volume** e **Altura**, fato indicado pela estimação do Coeficiente de Correlação Linear de Pearson (*$\widehat{R} = `r scales::number(cor(dados1$volume, dados1$height), accuracy = 0.001, big.mark = ".", decimal.mark = ",")`$*) .
 
-$$ \hat{Y}_i = -2,5 + 0,14X_i$$
+A reta de regressão ajustada é dada pela seguinte equação:
 
-A Tabela 2 traz os resultados do teste de hipóteses para correlação e o Intervalo de Confiança para o verdadeiro valor da correlação, podendo concluir, com base no p-valor menor que o nível de significância (**$\alpha = 5\%$**), que a hipótese nula ($H_0$) foi rejeitada, assumindo-se a hipótese alternativa ($H_1$) que afirma que $\rho \neq 0$.
 
-```{r tab1:teste_correlacao}
-#| echo: false
+$$ \widehat{Y_i} = `r scales::number(round(mFit$coefficients[[1]],4), accuracy = 0.001, big.mark = ".", decimal.mark = ",")` + `r scales::number(round(mFit$coefficients[[2]],4), accuracy = 0.001, big.mark = ".", decimal.mark = ",")` X_i; i = 1, \dots , n.$$
+
+
+## Item b: Diagnóstico do Modelo.
+
+
+```{r fig2:diagnostico}
+#| echo: false #true
 #| warning: false
+#| fig-align: center
+#| fig-pos: H
+#| fig-height: 4
+#| fig-width: 6
 
 
-cortest1 <- cor.test(dados1$volume, dados1$height)
-
-resultados <- cbind(cortest1$statistic, cortest1$p.value)
-aux <- rbind(cortest1$conf.int[1:2])
-
-resultados <- cbind(resultados, aux)
-
-rownames(resultados) <- "Altura" 
-colnames(resultados) <- c("t", "p-valor", "LI", "LS")
-
-resultados|>
-  kbl(
-    caption = "Teste de Hipótese para Correlação entre Volume e Altura",
-    digits = 5,
-    format.args=list(big.mark=".", decimal.mark=","),
-    align = "c", row.names = T, booktabs = T
-  )|>
-  kable_styling(
-    full_width = F, position = 'center', 
-    latex_options = c("striped", "HOLD_position", "repeat_header")
-  )|>
-  column_spec(1, bold = T
-  )|>
-  footnote(
-    general = "Teste realizado com 5% de significância",
-    general_title = "Nota:",
-    footnote_as_chunk = T
-  )|>
-  kable_material()
-```
-
-O Coeficiente de Determinação ($R^2$) apresenta um valor baixo, podendo afirmar que apenas aproximadamente 36% da variabilidade dos dados está sendo explicada pelo modelo de regressão calculado.
-
-
-### Significância do Modelo
-
-Após o ajuste do modelo existe a necessidade de se avaliar a significância do mesmo, o teste de hipótese para tal situação será realizado, contendo as seguintes hipóteses:
-
-$$H_0: \hat{\beta_1} = 0$$
-$$H_1: \hat{\beta_1} \neq 0.$$
-As Tabelas 3 e 4 trazem os principais resultados da tabela ANOVA e do Intervalo de Confiança para os parâmetros, possibilitando assim inferir sobre o modelo ajustado.
-
-
-```{r teste_diag_trans}
-#| echo: false
-#| warning: false
-
-fit_anova <- anova(mFit)|>
-  as.data.frame()
-
-fit_anova <- fit_anova|>
-  mutate(
-    `F value` = 
-      scales::number(`F value`, accuracy = 0.0001, 
-                     big.mark = ".", decimal.mark = ","),
-    `Pr(>F)` = 
-      scales::number(`Pr(>F)`, accuracy = 0.0001, 
-                     big.mark = ".", decimal.mark = ","))
-
-fit_anova[is.na(fit_anova)] <- ""
-
-rownames(fit_anova) <- c("Regressão", "Resíduos")
-
-fit_anova|>
-  kbl(
-    caption = "Análise de Variância (ANOVA)",
-    format.args=list(big.mark=".", decimal.mark=","),
-    digits = 3, align = "c", row.names = T, 
-    booktabs = T, escape = F,
-    col.names = c("$GL^1$", "Soma de Quadrados", "Quadrado Médio", "Estatística F-Snedecor", "p-valor")
-  )|>
-  kable_styling(
-    full_width = F, position = 'center', 
-    latex_options = c("striped", "HOLD_position", "repeat_header")
-  )|>
-  column_spec(1, bold = T
-  )|>
-    footnote(
-    number = c("GL: Graus de Liberdade"),
-    number_title = "Legenda:",
-    footnote_as_chunk = F
-  )|>
-  kable_material()
-
-
-resultados <- cbind(confint(mFit))
-rownames(resultados) <- c("$\\hat \\beta_0$", "$\\hat \\beta_1$")
-
-resultados|>
-  kbl(
-    caption = "Intervalos de Confiança para os parâmetros estimados no MRLS.",
-    format.args=list(big.mark=".", decimal.mark=","),
-    digits = 3, align = "c", row.names = T, booktabs = T,
-    escape = F,
-    col.names = c("$LI^1$", "$LS^2$")
-  )|>
-  kable_styling(
-    full_width = F, position = 'center', 
-    latex_options = c("striped", "HOLD_position", "repeat_header")
-  )|>
-  column_spec(1, bold = T
-  )|>
-    footnote(
-    symbol = "Nível de Significância de 5%.",
-    symbol_title = "",
-    footnote_as_chunk = T
-  )|>
-    footnote(
-    number = c(
-      "LI: Limite Inferior (2,5%)", 
-      "LS: Limite Superior (97,5%)"),
-    number_title = "Legenda:",
-    footnote_as_chunk = F
-  )|>
-  kable_material()
-```
-
-Com base na Tabela 4, avaliando o p-valor é possível afirmar que o modelo é significante rejeitando assim $H_0$ que tem como pressuposto $\hat{\beta_1} = 0$.
-
-Através dos Intervalos de Confiança calculados (Tabela 3) é possível afirmar **com 95% de confiança que o verdadeiro valor de $\beta_0$ está entre `r glue::glue('({scales::number(confint(mFit)[1,1], accuracy = 0.0001, big.mark = ".", decimal.mark = ",")}; {scales::number(confint(mFit)[1,2], accuracy = 0.0001, big.mark = ".", decimal.mark = ",")})')` e que o verdadeiro valor de $\beta_1$ está entre `r glue::glue('({scales::number(confint(mFit)[2,1], accuracy = 0.0001, big.mark = ".", decimal.mark = ",")}; {scales::number(confint(mFit)[2,2], accuracy = 0.0001, big.mark = ".", decimal.mark = ",")})')`**.
-
-
-### Análise de Resíduos
-
-```{r fig5:analise_residuos}
-#| echo: false
-#| warning: false
-#| fig-width: 7
-#| fig-height: 6
-
-
-mFit_resid <- broom::augment(mFit)
-
-####  Gráfico de Resíduos contra Valor Médio
-d1 <- mFit_resid|>
- ggplot(aes(x = .fitted, y = rstudent(mFit))) + 
-  geom_point(color = "#234B6E") +
-  geom_hline(aes(yintercept = 0), col="tomato")+
+# Diagnóstico do Modelo ----
+mFit|>
+  ggplot2::ggplot(aes(x = height, y = rstudent(mFit)))+
+  geom_point(color = "#112446", shape = 1)+
+  geom_hline(yintercept = 0, linetype = 2, size = 0.2) +
+  geom_hline(yintercept = 2, linetype = 2, size = 0.2) +
+  geom_hline(yintercept = -2, linetype = 2, size = 0.2)+
   labs(
-    x = "Valores Ajustados",
-    y = "Resíduos Estudentizados",
-    title = "Resíduos Estudentizados vs. \nValores Ajustados")+
+    title = "Figura 2: Gráfico de Resíduos Jacknife",
+    x = "Altura (m)",
+    y = "Resíduos Jacknife")+
   scale_x_continuous(
+    breaks = seq(18, 27, 1),
     labels = scales::number_format(
-      big.mark = ".", decimal.mark = ","))+
+      dig.mark = ".", decimal.mark = ","))+
   scale_y_continuous(
-    breaks = seq(from = -3, to = 4, by = 1),
+    breaks = seq(-3.5, 3, .5),
     labels = scales::number_format(
-      big.mark = ".", decimal.mark = ","))+
+      dig.mark = ".", decimal.mark = ","))+
   theme_minimal()+
   theme(
     legend.position = "none",
-    plot.title = element_text(size = 11, face = "plain"),
-    axis.title = element_text(size = 8, face = "plain"),
+    axis.title = element_text(size = 9, face = "plain"),
     axis.line = element_line(size = 0.5, color = "#222222"))
 
-####  Gráfico de normalidade dos resíduos
- d2 <- mFit_resid %>%
-   ggplot(aes(sample = .std.resid)) +
-   qqplotr::stat_qq_band(alpha = 0.3) +
-   qqplotr::stat_qq_point(color = "#234B6E") +
-   qqplotr::stat_qq_line(linetype = 2, size = 0.2) +
-   labs(
-     x = "Quantil Teórico",
-     y = "Quantil Amostral",
-     title = "Gráfico quantil-quantil normal"
-   )+
-    scale_x_continuous(breaks = seq(-3,3,1))+
-   scale_x_continuous(
-     labels = scales::number_format(
-       big.mark = ".", decimal.mark = ","))+
-   scale_y_continuous(
-     labels = scales::number_format(
-       big.mark = ".", decimal.mark = ","))+
-   theme_minimal()+
-   theme(
-     legend.position = "none",
-     plot.title = element_text(size = 11, face = "plain"),
-     axis.title = element_text(size = 8, face = "plain"),
-     axis.line = element_line(size = 0.5, color = "#222222"))
-
-#### Gráfico Homogeneidade de Variâncias (Locação-Escala) ----
- d3 <- mFit_resid %>%
-   ggplot(aes(x = .fitted, y = sqrt(abs(.std.resid)))) +
-   geom_point(color = "#234B6E") +
-   geom_smooth(
-     se = T, color = "tomato", method = 'loess', formula = 'y ~ x')+
-   labs(
-     x = "Valores Ajustados",
-     y = expression(sqrt("|Resíduos Padronizados|")),
-     title = "Homogeneidade de Variâncias \n(Locação-Escala)")+
-   scale_x_continuous(
-     labels = scales::number_format(
-       big.mark = ".", decimal.mark = ","))+
-   scale_y_continuous(
-     labels = scales::number_format(
-       big.mark = ".", decimal.mark = ","))+
-   theme_minimal()+
-   theme(
-     legend.position = "none",
-     plot.title = element_text(size = 11, face = "plain"),
-     axis.title = element_text(size = 8, face = "plain"),
-     axis.line = element_line(size = 0.5, color = "#222222"))
-
- d1 + d2 + d3 +
-   plot_layout(ncol = 2) +
-   plot_annotation(
-   title = "Figura 4: Análise de resíduos do modelo ajustado",
-   tag_levels = c("A", "1"), tag_prefix = "Sub Fig. ",
-   tag_sep = ".", tag_suffix = ":") &
-   theme(
-     legend.position = "none",
-     plot.tag.position = c(0, 1),
-     plot.tag = element_text(size = 6, hjust = 0, vjust = -0.4)
-   )
-
-
-```
-
-```{r fig5:analise_residuos2}
-#| echo: false
-#| warning: false
-#| fig-width: 7
-#| fig-height: 4
-
-
-# mFit_resid <- broom::augment(mFit)
-# 
-# mFit_resid %>% 
-#   ggplot(aes(x = .fitted, y = rstudent(mFit))) + 
-#   geom_point(color = "#234B6E") +
-#   geom_hline(aes(yintercept = 0), col="tomato")+
-#   labs(
-#     x = "Valores Ajustado",
-#     y = "Resíduos Estudentizados",
-#     title = "Resíduos Estudentizados vs. Valores Ajustados")+
-#   scale_x_continuous(
-#     labels = scales::number_format(
-#       big.mark = ".", decimal.mark = ","))+
-#   scale_y_continuous(
-#     breaks = seq(from = -3, to = 4, by = 1),
-#     labels = scales::number_format(
-#       big.mark = ".", decimal.mark = ","))+
-#   theme_minimal()+
-#   theme(
-#     legend.position = "none",
-#     plot.title = element_text(size = 11, face = "plain"),
-#     axis.title = element_text(size = 8, face = "plain"),
-#     axis.line = element_line(size = 0.5, color = "#222222"))
 ```
 
 
-A Figura 4 Sub.Fig A apresenta um comportamento assimétrico dos resíduos, podendo ser constatado uma pequena variabilidade inicial e um aumento desta à medida que os valores ajustados aumentam, caracterizando uma heterocedasticidade. A Sub.Fig C, que trada da Homogeneidade de Variâncias (Locação-Escala) ressalta que há um problema na variabilidade dos dados, corroborando com a interpretação feita na análise da Sub.Fig. A, de que há uma mudança na variabilidade dos dados, caracterizando Heterocedasticidade dos dados.
-A Sub.Fig. B que traz o gráfico para avaliação da normalidade dos dados, mostra que apesar dos dados não estarem precisamente sobre a reta de referência, os mesmos estão contidos na região pertencente ao Intervalo de Confiança - IC, podendo assumir que há normalidade, contudo tal avaliação será confirmada após os Testes de Diagnóstico.
+Com base na Figura 2 é possível constatar que a medida que a variável explicativa aumenta há um aumento na dispersão dos dados, caracterizando assim um comportamento heterocedástico, além da presença de um ponto atípico no extremo canto superior direito da figura. para contribuir com esta interpretação segue a Tabela 1 com os resultados dos testes não paramétricos.
 
 
 ### Testes de Diagnósticos do Modelo
 
 Para avaliar se o modelo atende aos pressupostos, além da análise gráfica podem ser realizados testes de diagnósticos, que são testes de hipóteses para avaliação dos pressupostos que são:
 
-- Normalidade;
+- **Normalidade**
 
   $H_0:$ Os resíduos possuem normalidade.
 
   $H_1:$ Os resíduos **não** possuem normalidade.
 
-- Homoscedasticidade (Homogeneidade de Variância);
+- **Homoscedasticidade (Homogeneidade de Variância)**
 
   $H_0:$ Os resíduos possuem variância constante.
 
   $H_1:$ Os resíduos **não** possuem variância constante.
 
-- Linearidade;
-- Independência.
+- **Independência**
 
   $H_0$: Existe correlação serial entre os resíduos.
   
   $H_1$: **Não** existe correlação serial entre os resíduos.
 
+- **Linearidade**
+
+  $H_0:$ **Não** há falta de ajuste (a regressão de fato é linear)
+  
+  $H_1:$ Há falta de ajuste (a regressão de fato não é linear)
+
 Para tanto serão utilizados os seguintes testes:
 
-- Shapiro-Wilk, para avaliar a Normalidade;
-- Breush-Pagan, para avaliar a Homoscedasticidade;
-- Durbin-Watson, para avaliar a Independência.
+- *Kolmogorov−Smirnov*, para avaliar a Normalidade;
+- *Breush-Pagan*, para avaliar a Homoscedasticidade;
+- *Durbin-Watson*, para avaliar a Independência.
 
 
 ```{r tab4:teste-diagnostico}
 #| echo: false
 #| warning: false
 
-res1 <- residuals(mFit)
+mFit_resid <- broom::augment(mFit)
 
 ##### Teste de normalidade dos resíduos ----
   #H0: normalidade
   #H1: não normalidade
 
-# SW*
-t_sw <- shapiro.test(res1)
+# KS
+t_ks <- stats::ks.test(mFit_resid$.resid, "pnorm", mean(mFit_resid$.resid), sd(mFit_resid$.resid))
 
 ##### Teste de homoscedasticidade dos resíduos ----
   #H0: resíduos homoscedásticos - Variância constante
   #H1: resíduos heteroscedásticos - Variância NÃO constante
 
 # BP*
-t_bp <- lmtest::bptest(mFit, studentize = F)
+t_bp <- lmtest::bptest(mFit, studentize = T)
 
 # Teste deF para linearidade
 
-# Teste de correlação serial lag 1 (Independência dos erros)
+# Teste de Independência dos erros
   #H0: correlacionados - existe correlação serial
   #H1: não correlacionados - não existe correlação serial ///ficou confuso no vídeo as hipoteses///
 
@@ -481,27 +266,25 @@ t_bp <- lmtest::bptest(mFit, studentize = F)
 t_dw <- lmtest::dwtest(mFit)
 
 resultados <- round(rbind(
-  t_sw$statistic,
+  t_ks$statistic,
   t_bp$statistic,
   t_dw$statistic),4)
 
 aux <- rbind(
-  round(t_sw$p.value,4),
-  round(t_bp$p.value,4),
-  "<0,0001")
+  t_ks$p.value,
+  t_bp$p.value,
+  t_dw$p.value)
 
-resultados <- cbind(resultados, aux)
+resultados <- cbind(resultados, aux) |> round(4)
 
-rownames(resultados) <- c("Shapiro-Wilk", "Breush-Pagan", "Durbin-Watson")
-
-colnames(resultados) <- c("Estatística de teste", "p-valor")
+rownames(resultados) <- c("Kolmogorov−Smirnov", "Breush-Pagan", "Durbin-Watson")
 
 resultados|>
   kbl(
     caption = "Testes de Diagnósticos dos Resíduos",
-    digits = 5,
     format.args=list(big.mark=".", decimal.mark=","),
-    align = "c", row.names = T, booktabs = T
+    digits = 5, align = "c", row.names = T, booktabs = T,
+    col.names = c("Estatística de teste", "p-valor")
   )|>
   kable_styling(
     full_width = F, position = 'center', 
@@ -509,26 +292,40 @@ resultados|>
   )|>
   column_spec(1, bold = T)|>
   kable_material()
+
 ```
 
-A Tabela 5 traz os testes de diagnósticos realizados para avaliar o modelo de regressão ajustado, conforme análise gráfica dos resíduos há a confirmação da heterocedasticidade de variância conforme o p-valor obtido pelo teste de Breush-Pagan (`r scales::number(t_bp$p.value, accuracy = 0.001, big.mark = ".", decimal.mark = ",")`) bem como a dependência entre as características confirmado pelo p-valor do teste de Durbin-Watson (<0,0001), em ambos os testes a hipótese nula ($H_0$) foi rejeitada com base p-valor, como tentativa de contornar a quebra dos pressupostos se faz necessária a transformação da variável resposta.
 
-### Transformações dos Dados
+A Tabela 1 traz os resultados dos testes não paramétricos realizados para avaliação dos pressupostos do modelo de regressão ajustado.
 
-Para esta análise a característica em estudo (Volume) será muitas vezes representada pela letra Y para melhor representação.
+Para a avaliação do pressuposto da normalidade, o teste de *Kolmogorov−Smirnov* não trouxe indícios para rejeitar a hipótese nula $H_0$ a um nível de 5%, com base no p-valor, contudo, conforme a prévia análise gráfica, há a confirmação da heterocedasticidade conforme o teste de *Breush-Pagan* (p-valor = `r scales::number(t_bp$p.value, accuracy = 0.00001, big.mark = ".", decimal.mark = ",")`) bem como da dependência entre as características, confirmado pelo teste de *Durbin-Watson* (p-valor = `r scales::number(t_dw$p.value, accuracy = 0.0000001, big.mark = ".", decimal.mark = ",")`) em ambos os testes rejeita-se a hipótese nula ($H_0$) a um nível de 5%, com base p-valor. 
 
-```{r ajuste_mod_trans}
+Como tentativa de contornar a quebra dos pressupostos se faz necessária a utilização de algumas técnicas sendo uma destas a técnica de transformação da variável resposta e uma nova avaliação.
+
+
+## Item c: Transformações dos Dados
+
+
+Tendo em vista que o modelo não atendeu aos pressupostos se faz necessário a utilização de técnicas para buscar uma melhora de performace do modelo antes da possibilidade de descarte e para tanto algumas transformações são sugeridas, sendo estas:
+
+
+- $T_1 = \sqrt{\widehat{Y}}$;
+- $T_2 = log(\widehat{Y})$;
+- $T_3 = \widehat{Y}^2$.
+
+
+Sendo Y a variável resposta do modelo representada pelo Volume.
+
+
+```{r fit_mod_transf}
 #| echo: false
 #| warning: false
 
-t1 <- dados1|>
-  mutate(volume = sqrt(volume))
+t1 <- dados1|> mutate(volume = sqrt(volume))
 
-t2 <- dados1|>
-  mutate(volume = log(volume))
+t2 <- dados1|> mutate(volume = log(volume))
 
-t3 <- dados1|>
-  mutate(volume = volume^2)
+t3 <- dados1|> mutate(volume = volume^2)
 
 mFitT1 <- lm(volume~height, data = t1)
 mFitT2 <- lm(volume~height, data = t2)
@@ -536,249 +333,160 @@ mFitT3 <- lm(volume~height, data = t3)
 ```
 
 
-Tendo em vista que o modelo não atendeu aos pressupostos se faz necessário a utilização de técnicas para buscar uma melhora de performace do modelo antes da possibilidade de descarte e para tanto algumas transformações são sugeridas, sendo estas:
-
-- $T_1 = \sqrt{Y}$;
-- $T_2 = log(Y)$;
-- $T_3 = Y^2$.
-
-Sendo Y a variável resposta do modelo representada pelo Volume.
+Após as transformações das variáveis acima descritas, seguem os MRLS ajustados:
 
 
-```{r tab5:summary-transform}
-#| echo: false
-#| warning: false
+$$ \sqrt{\widehat{Y_i}} = `r scales::number(round(mFitT1$coefficients[[1]],4), accuracy = 0.001, big.mark = ".", decimal.mark = ",")` + `r scales::number(round(mFitT1$coefficients[[2]],4), accuracy = 0.001, big.mark = ".", decimal.mark = ",")` X_i; i = 1, \dots , n.$$
 
 
-## Transformações ----
-
-t1 <- dados1|>
-  mutate(volume = sqrt(volume))
-
-t2 <- dados1|>
-  mutate(volume = log(volume))
-
-t3 <- dados1|>
-  mutate(volume = volume^2)
-
-### Medidas Resumo ----
-
-resultados <- cbind(dados1$volume, t1$volume, t2$volume, t3$volume)
-
-colnames(resultados) <- c("1. Volume", "2. √Volume", "3. log(Volume)", "4. Volume²")
-
-resultados |>
-  summarytools::descr(
-    stats = c("min", "q1", "med", "mean","q3", "max",  "sd", "cv"),
-    justify = "c",
-    style = "rmarkdown",
-    transpose = T
-  )|>
-  kbl(
-    caption = "Medidas Resumo da característica Volume com e sem transformações.",
-    digits = 3,
-    format.args=list(big.mark=".", decimal.mark=","),
-    align = "c", 
-    row.names = T, 
-    booktabs = T
-  )|>
-  kable_styling(
-    full_width = F,
-    position = 'center', 
-    latex_options = c("striped", "HOLD_position", "scale_down")
-  )|>
-  column_spec(1, bold = T)|>
-  kable_material()
-
-```
-
-A Tabela 6 traz a sumarização da característica em analise em sua forma natural juntamente com as formas transformadas para tentar identificar o comportamento destas transformações, podendo constatar um aumento na variabilidade dos dados, com base no valor do Coeficiente de Variação, com exceção da variável sob a transformação $Y^2$. Seguem as equações das retas ajustadas após a transformação.
-
-$$ \sqrt{\hat{Y_i}} = -0,89 + 0,077X_i$$
-
-$$ \log(\hat{Y_i}) = -4,4 + 0,18X_i$$
-
-$$ \hat{Y_i}^2 = -5,9 + 0,3X_i$$
+$$ \log{\widehat{Y_i}} = `r scales::number(round(mFitT2$coefficients[[1]],4), accuracy = 0.001, big.mark = ".", decimal.mark = ",")` + `r scales::number(round(mFitT2$coefficients[[2]],4), accuracy = 0.001, big.mark = ".", decimal.mark = ",")` X_i; i = 1, \dots , n.$$
 
 
-A Figura 5 traz os diagramas de dispersão com a reta ajustada para o modelo sem transformação e para cada transformação realizada, a fim de possibilitar a identificação das diferenças entre cada modelo.
+$$ \widehat{Y_i}^2 = `r scales::number(round(mFitT2$coefficients[[1]],4), accuracy = 0.001, big.mark = ".", decimal.mark = ",")` + `r scales::number(round(mFitT2$coefficients[[2]],4), accuracy = 0.001, big.mark = ".", decimal.mark = ",")` X_i; i = 1, \dots , n.$$
+
+
+A Figura 3 traz os diagramas de dispersão com a reta ajustada para o MRLS sem transformação (Sub. Fig. A) e para cada transformação realizada, a fim de possibilitar uma melhor identificação das diferenças entre cada modelo.
 
 
 ```{r fig3:transform}
-#| echo: false
+#| echo: false #true
 #| warning: false
-#| fig-width: 7
+#| fig-align: center
+#| fig-pos: H
 #| fig-height: 6
+#| fig-width: 7
 
 d1 <- dados1|>
   ggplot(aes(x = height, y = volume)) +
-  geom_point(
-    color = "#234B6E"
-  )+
+  geom_point(shape=1, color = "#112446")+
+  ggpubr::stat_cor(aes(label = paste(..r.label.., ..rr.label.., sep = "~`; `~")),
+                   cor.coef.name = c("R"), label.sep = "; ", geom = "text", 
+                   color="red", method = "pearson", label.x = 19.2, 
+                   label.y = 2, show.legend = F, p.accuracy = 0.001, 
+                   r.accuracy = 0.0001, size = 2.5)+
+  ggpubr::stat_regline_equation(aes(
+    label = paste(..eq.label.., ..adj.rr.label.., sep = "~`; `~")),
+    geom = "text", label.x = 19.2, label.y = 1.75, position = "identity", 
+    color="red", size = 2.5, show.legend = F)+
+  geom_smooth(linewidth=0.5, method=lm, se=T, formula = "y ~ x", 
+              color = "red", fill="#69b3a2")+
+
+  scale_x_continuous(breaks = seq(19,27,1))+
+  scale_y_continuous(breaks = seq(0, 2.5, 0.5), 
+                     labels = scales::number_format(big.mark = ".", 
+                                                    decimal.mark = ","))+
   labs(
-    title = "Modelo Ajustado entre o Volume e à \nAltura",
+    title = "Modelo Ajustado entre Y e à Altura",
     y = 'Volume (m³)',
     x = 'Altura (m)'
   )+
-  ggpubr::stat_cor(
-    aes(label = paste(..r.label.., ..rr.label.., sep = "~`; `~")),
-    cor.coef.name = c("R"),
-    label.sep = "; ", geom = "text",
-    color="red",
-    method = "pearson",
-    label.x = 19.2, label.y = 2, show.legend = F,
-    p.accuracy = 0.001, r.accuracy = 0.0001,
-    size = 2.5)+
-  ggpubr::stat_regline_equation(
-    aes(label = paste(..eq.label.., ..adj.rr.label.., sep = "~`; `~")),
-    geom = "text", label.x = 19.2, label.y = 1.75,
-    position = "identity",
-    color="red",
-    size = 2.5, show.legend = F
-  )+
-  geom_smooth(
-    method=lm, se=T, formula = "y ~ x", color = "tomato")+
   theme_minimal()+
-  scale_x_continuous(breaks = seq(19,27,1))+
-  scale_y_continuous(
-    breaks = seq(0, 2.5, 0.5),
-    labels = scales::number_format(
-      big.mark = ".",
-      decimal.mark = ","
-    ))+
   theme(legend.position = "none",
         plot.title = element_text(size = 11, face = "plain"),
         axis.title = element_text(size = 8, face = "plain"),
-        axis.line = element_line(size = 0.5, color = "#222222"))
+        axis.line = element_line(size = 0.5, color = "#222222")
+        )
+
 
 d2 <- t1|>
   ggplot(aes(x = height, y = volume)) +
-  geom_point(
-    color = "#234B6E"
-  )+
+  geom_point(shape=1, color = "#112446")+
+  ggpubr::stat_cor(aes(label = paste(..r.label.., ..rr.label.., sep = "~`; `~")),
+                   cor.coef.name = c("R"), label.sep = "; ", geom = "text", 
+                   color="red", method = "pearson", label.x = 19.2, 
+                   label.y = 1.375, show.legend = F, p.accuracy = 0.001, 
+                   r.accuracy = 0.0001, size = 2.5)+
+  ggpubr::stat_regline_equation(aes(
+    label = paste(..eq.label.., ..adj.rr.label.., sep = "~`; `~")),
+    geom = "text", label.x = 19.2, label.y = 1.25, position = "identity", 
+    color="red", size = 2.5, show.legend = F)+
+  geom_smooth(linewidth=0.5, method=lm, se=T, formula = "y ~ x", 
+              color = "red", fill="#69b3a2")+
+
+  scale_x_continuous(breaks = seq(19,27,1))+
+  scale_y_continuous(breaks = seq(0, 1.5, 0.25),
+                     labels = scales::number_format(big.mark = ".", 
+                                                    decimal.mark = ","))+
   labs(
-    title = "Modelo Ajustado entre a raiz[Volume (m³)] \ne à Altura",
+    title = "Modelo Ajustado entre a raiz(Y) e à Altura",
     y = expression(sqrt('Volume (m³)')),
     x = 'Altura (m)'
   )+
-  ggpubr::stat_cor(
-    aes(label = paste(..r.label.., ..rr.label..,  sep = "~`; `~")),
-    cor.coef.name = c("R"),
-    label.sep = "; ", geom = "text",
-    color="red",
-    method = "pearson",
-    label.x = 19.2, label.y = 1.375, show.legend = F,
-    p.accuracy = 0.001, r.accuracy = 0.0001,
-    size = 2.5)+
-  ggpubr::stat_regline_equation(
-    aes(label = paste(..eq.label.., ..adj.rr.label.., sep = "~`; `~")),
-    geom = "text", label.x = 19.2, label.y = 1.25, 
-    position = "identity", 
-    color="red",
-    size = 2.5, show.legend = F
-  )+
-  geom_smooth(
-    method=lm, se=T, formula = "y ~ x", color = "tomato")+
   theme_minimal()+
-  scale_x_continuous(breaks = seq(19,27,1))+
-  scale_y_continuous(
-    breaks = seq(0, 1.5, 0.25),
-    labels = scales::number_format(
-      big.mark = ".",
-      decimal.mark = ","
-    ))+
   theme(legend.position = "none",
         plot.title = element_text(size = 11, face = "plain"),
         axis.title = element_text(size = 8, face = "plain"),
-        axis.line = element_line(size = 0.5, color = "#222222"))
+        axis.line = element_line(size = 0.5, color = "#222222")
+        )
+
 
 d3 <- t2|>
   ggplot(aes(x = height, y = volume)) +
-  geom_point(
-    color = "#234B6E"
-  )+
+  geom_point(shape=1, color = "#112446")+
+  ggpubr::stat_cor(aes(label = paste(..r.label.., ..rr.label.., sep = "~`; `~")),
+                   cor.coef.name = c("R"), label.sep = "; ", geom = "text", 
+                   color="red", method = "pearson", label.x = 19.2, 
+                   label.y = 0.7, show.legend = F, p.accuracy = 0.001, 
+                   r.accuracy = 0.0001, size = 2.5)+
+  ggpubr::stat_regline_equation(aes(
+    label = paste(..eq.label.., ..adj.rr.label.., sep = "~`; `~")),
+    geom = "text", label.x = 19.2, label.y = 0.4, position = "identity", 
+    color="red", size = 2.5, show.legend = F)+
+  geom_smooth(linewidth=0.5, method=lm, se=T, formula = "y ~ x", 
+              color = "red", fill="#69b3a2")+
+
+  scale_x_continuous(breaks = seq(19,27,1))+
+  scale_y_continuous(breaks = seq(-1.3, 0.8, 0.3),
+                     labels = scales::number_format(big.mark = ".", 
+                                                    decimal.mark = ","))+
   labs(
-    title = "Modelo Ajustado entre o log[Volume (m³)] \ne à Altura",
+    title = "Modelo Ajustado entre o log(Y) e a Altura",
     y = expression(log('Volume (m³)')),
     x = 'Altura (m)'
   )+
-  ggpubr::stat_cor(
-    aes(label = paste(..r.label.., ..rr.label..,  sep = "~`; `~")),
-    cor.coef.name = c("R"),
-    label.sep = "; ", geom = "text",
-    color="red",
-    method = "pearson",
-    label.x = 19.2, label.y = 0.7, show.legend = F,
-    p.accuracy = 0.001, r.accuracy = 0.0001,
-    size = 2.5)+
-  ggpubr::stat_regline_equation(
-    aes(label = paste(..eq.label.., ..adj.rr.label.., sep = "~`; `~")),
-    geom = "text", label.x = 19.2, label.y = 0.5, 
-    position = "identity", 
-    color="red",
-    size = 2.5, show.legend = F
-  )+
-  geom_smooth(
-    method=lm, se=T, formula = "y ~ x", color = "tomato")+
   theme_minimal()+
-  scale_x_continuous(breaks = seq(19,27,1))+
-  scale_y_continuous(
-    breaks = seq(-1.3, 0.8, 0.3),
-    labels = scales::number_format(
-      big.mark = ".",
-      decimal.mark = ","
-    ))+
   theme(legend.position = "none",
         plot.title = element_text(size = 11, face = "plain"),
         axis.title = element_text(size = 8, face = "plain"),
-        axis.line = element_line(size = 0.5, color = "#222222"))
+        axis.line = element_line(size = 0.5, color = "#222222")
+        )
+
 
 d4 <- t3|>
   ggplot(aes(x = height, y = volume)) +
-  geom_point(
-    color = "#234B6E"
-  )+
+  geom_point(shape=1, color = "#112446")+
+  ggpubr::stat_cor(aes(label = paste(..r.label.., ..rr.label.., sep = "~`; `~")),
+                   cor.coef.name = c("R"), label.sep = "; ", geom = "text", 
+                   color="red", method = "pearson", label.x = 19.2, 
+                   label.y = 4.5, show.legend = F, p.accuracy = 0.001, 
+                   r.accuracy = 0.0001, size = 2.5)+
+  ggpubr::stat_regline_equation(aes(
+    label = paste(..eq.label.., ..adj.rr.label.., sep = "~`; `~")),
+    geom = "text", label.x = 19.2, label.y = 3.8, position = "identity", 
+    color="red", size = 2.5, show.legend = F)+
+  geom_smooth(linewidth=0.5, method=lm, se=T, formula = "y ~ x", 
+              color = "red", fill="#69b3a2")+
+
+  scale_x_continuous(breaks = seq(19,27,1))+
+  scale_y_continuous(breaks = seq(-0.5, 5, 0.75), 
+                     labels = scales::number_format(big.mark = ".", 
+                                                    decimal.mark = ","))+
   labs(
-    title = "Modelo Ajustado entre o [Volume (m³)]² \ne à Altura",
+    title = "Modelo Ajustado entre Y² e a Altura",
     y = '[Volume (m³)]²',
     x = 'Altura (m)'
   )+
-  ggpubr::stat_cor(
-    aes(label = paste(..r.label.., ..rr.label..,  sep = "~`; `~")),
-    cor.coef.name = c("R"),
-    label.sep = "; ", geom = "text",
-    color="red",
-    method = "pearson",
-    label.x = 19.2, label.y = 4.5, show.legend = F,
-    p.accuracy = 0.001, r.accuracy = 0.0001,
-    size = 2.5)+
-  ggpubr::stat_regline_equation(
-    aes(label = paste(..eq.label.., ..adj.rr.label.., sep = "~`; `~")),
-    geom = "text", label.x = 19.2, label.y = 4, 
-    position = "identity", 
-    color="red",
-    size = 2.5, show.legend = F
-  )+
-  geom_smooth(
-    method=lm, se=T, formula = "y ~ x", color = "tomato")+
   theme_minimal()+
-  scale_x_continuous(breaks = seq(19,27,1))+
-  scale_y_continuous(
-    breaks = seq(-0.5, 5, 0.75),
-    labels = scales::number_format(
-      big.mark = ".",
-      decimal.mark = ","
-    ))+
   theme(legend.position = "none",
         plot.title = element_text(size = 11, face = "plain"),
         axis.title = element_text(size = 8, face = "plain"),
-        axis.line = element_line(size = 0.5, color = "#222222"))
-
+        axis.line = element_line(size = 0.5, color = "#222222")
+        )
 
 d1 + d2 + d3 + d4 +
   plot_layout(ncol = 2) +
   plot_annotation(
-    title = "Figura 5: Modelo ajustado e suas transformações",
+    title = "Figura 3: Modelo ajustado e suas transformações",
     subtitle = "Comparativo entre o modelo ajustado sem transformação com os modelos após a transformações \nda variável resposta.",
     tag_levels = c("A", "1"), tag_prefix = "Sub Fig. ",
     tag_sep = ".", tag_suffix = ":") &
@@ -792,33 +500,33 @@ d1 + d2 + d3 + d4 +
 
 
 
-
 ```{r fig4:residuos_transform}
-#| echo: false
+#| echo: false #true
 #| warning: false
-#| fig-width: 7
+#| fig-align: center
+#| fig-pos: H
 #| fig-height: 6
+#| fig-width: 7
 
-### Residuos ----
+ # Residuos ----
 
 mFitT1_resid <- broom::augment(mFitT1)
 mFitT2_resid <- broom::augment(mFitT2)
 mFitT3_resid <- broom::augment(mFitT3)
 
-d1 <- mFitT1_resid %>% 
-  ggplot(aes(x = .fitted, y = rstudent(mFitT1))) + 
-  geom_point(color = "#234B6E") +
-  geom_hline(aes(yintercept = 0), col="tomato")+
+d1 <- mFitT1 |>
+  ggplot(aes(x = height, y = rstudent(mFitT1))) + 
+  geom_point(shape=1, color = "#112446") +
+  geom_hline(aes(yintercept = 0), col="red")+
   labs(
-    x = "Valores Ajustado",
-    y = "Resíduos Estudentizados",
-    title = expression(sqrt("Volume (m³)")))+
+    x = "Altura (m)", y = "Resíduos Estudentizados",
+    title = expression(sqrt("Y")))+
   scale_x_continuous(
-    labels = scales::number_format(
-      big.mark = ".", decimal.mark = ","))+
+    breaks = seq(19, 27, 1),
+    labels = scales::number_format(big.mark = ".", decimal.mark = ","))+
   scale_y_continuous(
-    labels = scales::number_format(
-      big.mark = ".", decimal.mark = ","))+
+    breaks = seq(-3, 3, 1),
+    labels = scales::number_format(big.mark = ".", decimal.mark = ","))+
   theme_minimal()+
   theme(
     legend.position = "none",
@@ -826,20 +534,20 @@ d1 <- mFitT1_resid %>%
     axis.title = element_text(size = 8, face = "plain"),
     axis.line = element_line(size = 0.5, color = "#222222"))
 
-d2 <- mFitT2_resid %>% 
-  ggplot(aes(x = .fitted, y = rstudent(mFitT2))) + 
-  geom_point(color = "#234B6E") +
-  geom_hline(aes(yintercept = 0), col="tomato")+
+
+d2 <- mFitT2 |>
+  ggplot(aes(x = height, y = rstudent(mFitT2))) + 
+  geom_point(shape=1, color = "#112446") +
+  geom_hline(aes(yintercept = 0), col="red")+
   labs(
-    x = "Valores Ajustado",
-    y = "Resíduos Estudentizados",
-    title = expression(log("Volume (m³)")))+
+    x = "Altura (m)", y = "Resíduos Estudentizados",
+    title = expression(log("Y")))+
   scale_x_continuous(
-    labels = scales::number_format(
-      big.mark = ".", decimal.mark = ","))+
+    breaks = seq(19, 27, 1),
+    labels = scales::number_format(big.mark = ".", decimal.mark = ","))+
   scale_y_continuous(
-    labels = scales::number_format(
-      big.mark = ".", decimal.mark = ","))+
+    breaks = seq(-2, 2, 1),
+    labels = scales::number_format(big.mark = ".", decimal.mark = ","))+
   theme_minimal()+
   theme(
     legend.position = "none",
@@ -847,20 +555,20 @@ d2 <- mFitT2_resid %>%
     axis.title = element_text(size = 8, face = "plain"),
     axis.line = element_line(size = 0.5, color = "#222222"))
 
-d3 <- mFitT3_resid %>% 
-  ggplot(aes(x = .fitted, y = rstudent(mFitT3))) + 
-  geom_point(color = "#234B6E") +
-  geom_hline(aes(yintercept = 0), col="tomato")+
+
+d3 <- mFitT3 |>
+  ggplot(aes(x = height, y = rstudent(mFitT3))) + 
+  geom_point(shape=1, color = "#112446") +
+  geom_hline(aes(yintercept = 0), col="red")+
   labs(
-    x = "Valores Ajustado",
-    y = "Resíduos Estudentizados",
-    title = "Volume²")+
+    x = "Altura (m)", y = "Resíduos Estudentizados",
+    title = "Y²")+
   scale_x_continuous(
-    labels = scales::number_format(
-      big.mark = ".", decimal.mark = ","))+
+    breaks = seq(19, 27, 1),
+    labels = scales::number_format(big.mark = ".", decimal.mark = ","))+
   scale_y_continuous(
-    labels = scales::number_format(
-      big.mark = ".", decimal.mark = ","))+
+    breaks = seq(-1, 4, 1),
+    labels = scales::number_format(big.mark = ".", decimal.mark = ","))+
   theme_minimal()+
   theme(
     legend.position = "none",
@@ -868,11 +576,11 @@ d3 <- mFitT3_resid %>%
     axis.title = element_text(size = 8, face = "plain"),
     axis.line = element_line(size = 0.5, color = "#222222"))
 
-d1 + d2 + d3 +
+
+d1 + d2 + d3 + 
   plot_layout(ncol = 2) +
   plot_annotation(
-    title = "Figura 6: Gráficos dos Resíduos Estudentizados vs. Valores Ajustados \ndas características transformadas.",
-    # subtitle = "Comparativo entre o modelo ajustado sem transformação com os modelos após a transformações da variável resposta",
+    title = "Figura 4: Gráficos dos Resíduos Estudentizados vs. Variável Explicativa.",
     tag_levels = c("A", "1"), tag_prefix = "Sub Fig. ",
     tag_sep = ".", tag_suffix = ":") &
   theme(
@@ -884,10 +592,11 @@ d1 + d2 + d3 +
 ```
 
 
-A Figura 6 traz os gráficos comparativos dos resíduos estudentizados (*Jacknife*) versus os valores ajustados das variáveis transformadas, sendo possível constatar que houve uma aparente melhora na variabilidade nas Sub.Figs. A e B, contudo houve uma maior evidenciação do ponto atípico na Sub.Fig C, sendo este influente o suficiente para interferir a variabilidade total deste modelo, sendo descartado este modelo transformado pela quebra do pressuposto da homogeneidade de variâncias.
-Dentre os modelos sob a transformação $\sqrt{Y}$ e $log(Y)$, a figura que traz o comparativo dos resíduos sob a transformação $log(Y)$ (Sub.Fig. B) apresenta uma maior homogeneidade de variância, sendo o modelo mais adequado dentre os modelos transformados.
+A Figura 4 traz os gráficos comparativos dos resíduos estudentizados (*Jacknife*) versus variável explicativa, sendo possível constatar que houve uma aparente melhora na variabilidade nas Sub.Figs. A e B, também se percebe uma maior evidenciação do ponto atípico na Sub.Fig. C, sendo este influente o suficiente para interferir na variabilidade total deste modelo, portanto este modelo transformado foi descartado pela quebra do pressuposto da homogeneidade de variâncias.
+Dentre os modelos sob a transformação restantes ($\sqrt{Y}$ e $log(Y)$), o modelo sob a transformação $log(Y)$ (Sub.Fig. B) apresenta uma maior homogeneidade de variância, sendo o mais adequado dentre os modelos transformados.
 
-Como forma de confirmar a avaliação feita sobre a analise gráfica, foi construída a Tabela 6 com os testes de diagnósticos dos resíduos do modelo sob a transformação $log(Y)$.
+Como forma de corroborar com a avaliação feita sobre a análise gráfica, foi construída a Tabela 2 com os testes de diagnósticos dos resíduos do modelo sob a transformação escolhida ($log(Y)$).
+
 
 
 ```{r tab6:diag_test_trans}
@@ -896,34 +605,34 @@ Como forma de confirmar a avaliação feita sobre a analise gráfica, foi constr
 
 resT2 <- residuals(mFitT2)
 
-t_sw_t2 <- shapiro.test(resT2)
+# t_sw_t2 <- shapiro.test(resT2)
+t_ks_t2 <- stats::ks.test(resT2, "pnorm", mean(resT2), sd(resT2))
 
-t_bp_T2 <- lmtest::bptest(mFitT2, studentize = F)
+t_bp_T2 <- lmtest::bptest(mFitT2, studentize = T)
 
 t_dw_T2 <- lmtest::dwtest(mFitT2)
 
-resultados <- round(rbind(
-  t_sw_t2$statistic,
+resultados <- rbind(
+  t_ks_t2$statistic,
   t_bp_T2$statistic,
-  t_dw_T2$statistic),4)
+  t_dw_T2$statistic)
 
 aux <- rbind(
-  round(t_sw_t2$p.value,4),
-  round(t_bp_T2$p.value,4),
-  "<0,0001")
+  t_ks_t2$p.value,
+  t_bp_T2$p.value,
+  t_dw_T2$p.value)
 
-resultados <- cbind(resultados, aux)
 
-rownames(resultados) <- c("Shapiro-Wilks", "Breush-Pagan", "Durbin-Watson")
+resultados <- cbind(resultados, aux) |> round(4)
 
-colnames(resultados) <- c("Estatística de teste", "p-valor")
+rownames(resultados) <- c("Kolmogorov−Smirnov", "Breush-Pagan", "Durbin-Watson")
 
 resultados|>
   kbl(
     caption = "Testes de Diagnósticos dos Resíduos após transformação log(Y)",
-    digits = 5,
     format.args=list(big.mark=".", decimal.mark=","),
-    align = "c", row.names = T, booktabs = T
+    digits = 5, align = "c", row.names = T, booktabs = T,
+    col.names = c("Estatística de teste", "p-valor")
   )|>
   kable_styling(
     full_width = F, position = 'center', 
@@ -934,7 +643,11 @@ resultados|>
 ```
 
 
-A Tabela 7 traz os testes de diagnóstico para a o modelo após a transformação da variável resposta, sendo possível constatar que após a transformação o novo modelo não rejeita a hipótese nula ($H_0$) para o teste de homogeneidade de variância, corroborando com a análise gráfica, contudo, os demais testes não foram bem sucedidos.
+Baseado nos testes de diagnóstico para a o MRLS após a transformação da variável resposta (Y), se conclui, com 5% de significância, que o modelo é homocedástico. 
+
+
+## Item d: Box e Cox
+
 
 Tendo em vista não ser a tarefa mais simples a aplicação de diversas transformações e os devidos testes para avaliar o melhor possível modelo a ser utilizado, que minimize a variância residual, a opção mais adequada é a escolha do modelo baseado na família de transformações de Box-Cox, definida por:
 
@@ -943,7 +656,7 @@ $$Y(\lambda) = \begin{cases} \dfrac{Y^{\lambda} - 1}{\lambda}, \text{ se } \lamb
 
 sendo $\lambda$ o parâmetro da transformação.
 
-Para tanto a Figura 7 foi construída com base na função de $\lambda$ para a escolha da transformação apropriada.
+Para tanto a Figura 5 foi construída com base na função de $\lambda$ para a escolha da transformação apropriada.
 
 
 ```{r fig5:box-cox}
@@ -954,20 +667,22 @@ Para tanto a Figura 7 foi construída com base na função de $\lambda$ para a e
 
 par(mfrow = c(1, 1), mar=c(4,4,2,1), oma=c(1.5,1,1.5,1))
 bc <- MASS::boxcox(mFit, lambda = seq(-1, 1, 1/10), ylab = "log-Verossimilhança")
-mtext(side = 3, text = "Figura 7: Transformação Box-Cox", outer = T)
+mtext(side = 3, text = "Figura 5: Transformação Box-Cox", outer = T)
 par(mfrow = c(1, 1), mar=c(5, 4, 4, 2) + 0.1, oma=c(1.5,1,1.5,1))
 
 lambda <- bc$x[which.max(bc$y)]
+
 ```
 
 Analisando o gráfico das **famílias de transformações Box-Cox** é possível identificar que $-0,5 < \lambda_{max} < 0$ ($\lambda_{max}\approx$ `r scales::number(lambda, accuracy = 0.001, big.mark = ".", decimal.mark = ",")`), partindo do princípio que o valor zero está incluso no intervalo de valores possíveis de $\lambda$ que minimizam a variância residual, mesmo o zero não sendo o máximo valor assumido, ainda assim, visando a escolha de uma transformação que possibilite uma interpretação facilitada, **a escolha da transformação $log(Y)$ torna-se a escolha mais assertiva**, conforme conclusão anteriormente feita baseado na análise gráfica.
 
 
-<!-- Com base nos valores do Coeficiente de Determinação $R^2$ dos gráficos contidos da Figura 3, é possível constatar que o gráfico cuja transformação $log(Y)$ foi aplicada apresentou uma melhora no que diz respeito a possibilidade do modelo explicar a variabilidade dos dados, mesmo não sendo um valor considerado satisfatório, ainda assim é possível constatar a melhora de performance ao aplicar a transformação na característica utilizada como variável resposta. -->
+## Item e: Conclusão
 
-## Conclusão
 
-Após as análises realizadas sobre modelo ajustado foi possível constatar uma melhora no desempenho do modelo, quanto a variabilidade dos dados, após a transformação da variável resposta para a transformação $log(Y)$, fato constatado através da Figura 3 por meio do valor do Coeficiente de Determinação $R^2$ bem como através da análise da Figura 4, por meio dos resíduos.
+Após as análises realizadas sobre modelo ajustado foi possível constatar uma melhora no desempenho deste, quanto a variabilidade dos dados, após a transformação da variável resposta para a transformação $log(Y)$, fato constatado na Figura 3 por meio do valor do Coeficiente de Determinação $R^2$ bem como através da análise dos resíduos (Figura 4).
 
-Apesar de não se ter conseguido um modelo que preenchesse todos os pressupostos, ainda assim, na possibilidade desse modelo ter sido satisfatório, poder-se-ia interpretar a sua utilização da seguinte forma:
-Para cada aumento de um metro na altura da árvore, há uma redução média de $exp(-4,4)$ m³ no volume ou aproximadamente `r scales::number(exp(-4.4), accuracy = 0.001, big.mark = ".", decimal.mark = ",")` m³.
+Apesar de não ter conseguido um modelo que preenchesse todos os pressupostos, ainda assim, na possibilidade desse modelo ter sido satisfatório, poder-se-ia interpretar a sua utilização da seguinte forma:
+Para cada aumento de um metro na altura da árvore, há um aumento médio de $exp(0,18)$ $m^3$ no volume ou aproximadamente `r scales::number(exp(0.18), accuracy = 0.001, big.mark = ".", decimal.mark = ",")` $m^3$.
+
+
