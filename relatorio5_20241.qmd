@@ -161,7 +161,82 @@ $$ \widehat{Y_i} = `r scales::number(round(mFit$coefficients[[1]],4), accuracy =
 ## Item b: Diagnóstico do Modelo.
 
 
-```{r fig2:diagnostico}
+```{r fig2:hist+box-plot}
+#| echo: false #true
+#| warning: false
+#| fig-align: center
+#| fig-pos: H
+#| fig-height: 4
+#| fig-width: 7
+
+
+# Diagnóstico do Modelo ----
+p1 <- mFit|>
+  ggplot2::ggplot(aes(x = rstudent(mFit)))+
+  geom_histogram(aes(y = ..density..), fill = "#112446", 
+                 color = "#112446", binwidth = 0.4, alpha = 0.5)+
+  geom_vline(xintercept = mean(rstudent(mFit)), 
+             color = "red", linetype = "dashed") +
+  annotate("text", x = 0.6, y = 0.7, label = "Média", size=3, color="red")+
+  geom_vline(xintercept = quantile(rstudent(mFit), 0.5),
+    color = "blue", linetype = "dashed") +
+  annotate("text", x = -0.9, y = 0.7,
+           label = "Mediana", size=3, color="blue")+
+  labs(x = "Resíduos Estudentizados", y = "Densidade",
+       title = "Histograma dos Resíduos \nJacknife")+
+  scale_x_continuous()+
+  scale_y_continuous(labels = scales::percent)+
+  theme_minimal()+
+  theme(
+    legend.position = "none",
+    axis.title = element_text(size = 9, face = "plain"),
+    axis.line = element_line(size = 0.5, color = "#222222"))
+
+
+p2 <- mFit|>
+  ggplot2::ggplot(aes(x="", y = rstudent(mFit)))+
+  geom_boxplot(col="#112446", fill="#112446", alpha = 0.5, 
+               orientation = "x", outlier.shape=1, 
+               outlier.color="#112446", outlier.fill="#112446")+
+  stat_summary(fun="mean", geom="point", 
+               shape=18, size=2, color = "red")+
+  annotate("text", x = "", y = 0.3, label = "Média", size=3, color="red")+
+  labs(title = "Box−Plot dos Resíduos \nEstudentizados", 
+       x="", y = "Resíduos Estudentizados") +
+  scale_y_continuous(
+    labels = scales::number_format(dig.mark = ".", decimal.mark = ","))+
+  theme_minimal()+
+  theme(legend.position = "none",
+    axis.title = element_text(size = 9, face = "plain"),
+    axis.line = element_line(size = 0.5, color = "#222222"))
+
+```
+
+
+```{r fig2:plot}
+#| echo: false #true
+#| warning: false
+#| fig-align: center
+#| fig-pos: H
+#| fig-height: 3
+#| fig-width: 8
+
+(p1+p2) +
+  plot_layout(ncol = 2, byrow = F) +
+  plot_annotation(
+    title = "Figura 2: Avaliação do comportamento dos resíduos.",
+    tag_levels = c("A", "1"), tag_prefix = "Sub Fig. ", tag_sep = ".",
+    tag_suffix = ":") &
+  theme(
+    plot.tag.position = c(0, 1),
+    plot.tag = element_text(size = 8, hjust = 0, vjust = -0.4))
+```
+
+
+Com base na Figura 2 é possível constatar que os resíduos apresentam um comportamento assimétrico, fato esse identificado tanto no histograma (Sub. Fig. A) quanto no *box-plot* (Sub. Fig. B), percebe-se também uma aparente variabilidade acentuada nos resíduos, fato a ser confirmado nas analises a seguir.
+
+
+```{r fig3:diagnostico}
 #| echo: false #true
 #| warning: false
 #| fig-align: center
@@ -171,14 +246,35 @@ $$ \widehat{Y_i} = `r scales::number(round(mFit$coefficients[[1]],4), accuracy =
 
 
 # Diagnóstico do Modelo ----
-mFit|>
+
+d1 <- mFit |> 
+  ggplot(aes(sample = rstudent(mFit))) + 
+  qqplotr::stat_qq_band(alpha = 0.3) +
+  qqplotr::stat_qq_point(color = "#234B6E", shape=1) +
+  qqplotr::stat_qq_line(linetype = 2, size = 0.2) +
+  labs(
+    x = "Quantil Teórico", y = "Quantil Amostral",
+    title = "Q-Q Normal Plot"
+  )+
+  scale_x_continuous(
+    labels = scales::number_format(big.mark = ".", decimal.mark = ","))+
+  scale_y_continuous(
+    breaks = seq(-3, 3, 1),
+    labels = scales::number_format(big.mark = ".", decimal.mark = ","))+
+  theme_minimal()+
+  theme(legend.position = "none",
+    axis.title = element_text(size = 8, face = "plain"),
+    axis.line = element_line(size = 0.8, color = "#222222"))
+
+
+d2 <- mFit|>
   ggplot2::ggplot(aes(x = height, y = rstudent(mFit)))+
   geom_point(color = "#112446", shape = 1)+
   geom_hline(yintercept = 0, linetype = 2, size = 0.2) +
   geom_hline(yintercept = 2, linetype = 2, size = 0.2) +
   geom_hline(yintercept = -2, linetype = 2, size = 0.2)+
   labs(
-    title = "Figura 2: Gráfico de Resíduos Jacknife",
+    title = "Gráfico de Resíduos Jacknife",
     x = "Altura (m)",
     y = "Resíduos Jacknife")+
   scale_x_continuous(
@@ -186,7 +282,7 @@ mFit|>
     labels = scales::number_format(
       dig.mark = ".", decimal.mark = ","))+
   scale_y_continuous(
-    breaks = seq(-3.5, 3, .5),
+    breaks = seq(-3.5, 6, .5),
     labels = scales::number_format(
       dig.mark = ".", decimal.mark = ","))+
   theme_minimal()+
@@ -198,10 +294,33 @@ mFit|>
 ```
 
 
-Com base na Figura 2 é possível constatar que a medida que a variável explicativa aumenta há um aumento na dispersão dos dados, caracterizando assim um comportamento heterocedástico, além da presença de um ponto atípico no extremo canto superior direito da figura. para contribuir com esta interpretação segue a Tabela 1 com os resultados dos testes não paramétricos.
+```{r fig3:plot}
+#| echo: false #true
+#| warning: false
+#| fig-align: center
+#| fig-pos: H
+#| fig-height: 3
+#| fig-width: 8
+
+(d1+d2) +
+  plot_layout(ncol = 2, byrow = F) +
+  plot_annotation(
+    title = "Figura 3: Avaliação dos pressupostos do modelo ajustado.",
+    tag_levels = c("A", "1"), tag_prefix = "Sub Fig. ", tag_sep = ".",
+    tag_suffix = ":") &
+    theme(plot.tag.position = c(0, 1),
+    plot.tag = element_text(size = 8, hjust = 0, vjust = -0.4))
+```
+
+
+A análise dos pressupostos é fundamental para avaliar se a adequação do modelo é satisfatória. Observando a Figura 3, Sub. Fig. A, figura que avalia a condição de normalidade, percebe-se um comportamento que foge a reta de referencia na região central da figura, o que dificulta bastante uma possível correção, contudo os pontos permanecem dentro da região de confiança, ainda assim, não se rejeita esse pressuposto.
+
+
+A Sub. Fig. B traz o gráfico dos resíduos estudentizados vs a variável explicativa e através dele se constata que não há homogeneidade de variâncias, ou seja, a medida que a variável explicativa aumenta há um aumento na dispersão dos dados, caracterizando assim um comportamento heterocedástico, além da presença de um ponto atípico no extremo canto superior direito da figura. para contribuir com esta interpretação segue a Tabela 1 com os resultados dos testes não paramétricos.
 
 
 ### Testes de Diagnósticos do Modelo
+
 
 Para avaliar se o modelo atende aos pressupostos, além da análise gráfica podem ser realizados testes de diagnósticos, que são testes de hipóteses para avaliação dos pressupostos que são:
 
@@ -309,9 +428,9 @@ Como tentativa de contornar a quebra dos pressupostos se faz necessária a utili
 Tendo em vista que o modelo não atendeu aos pressupostos se faz necessário a utilização de técnicas para buscar uma melhora de performace do modelo antes da possibilidade de descarte e para tanto algumas transformações são sugeridas, sendo estas:
 
 
-- $T_1 = \sqrt{\widehat{Y}}$;
-- $T_2 = log(\widehat{Y})$;
-- $T_3 = \widehat{Y}^2$.
+- $T_1 = \sqrt{Y}$;
+- $T_2 = log(Y)$;
+- $T_3 = Y^2$.
 
 
 Sendo Y a variável resposta do modelo representada pelo Volume.
@@ -336,25 +455,25 @@ mFitT3 <- lm(volume~height, data = t3)
 Após as transformações das variáveis acima descritas, seguem os MRLS ajustados:
 
 
-$$ \sqrt{\widehat{Y_i}} = `r scales::number(round(mFitT1$coefficients[[1]],4), accuracy = 0.001, big.mark = ".", decimal.mark = ",")` + `r scales::number(round(mFitT1$coefficients[[2]],4), accuracy = 0.001, big.mark = ".", decimal.mark = ",")` X_i; i = 1, \dots , n.$$
+$$ \widehat{T_1} = `r scales::number(round(mFitT1$coefficients[[1]],4), accuracy = 0.001, big.mark = ".", decimal.mark = ",")` + `r scales::number(round(mFitT1$coefficients[[2]],4), accuracy = 0.001, big.mark = ".", decimal.mark = ",")` X_i; i = 1, \dots , n.$$
 
 
-$$ \log{\widehat{Y_i}} = `r scales::number(round(mFitT2$coefficients[[1]],4), accuracy = 0.001, big.mark = ".", decimal.mark = ",")` + `r scales::number(round(mFitT2$coefficients[[2]],4), accuracy = 0.001, big.mark = ".", decimal.mark = ",")` X_i; i = 1, \dots , n.$$
+$$ \widehat{T_2} = `r scales::number(round(mFitT2$coefficients[[1]],4), accuracy = 0.001, big.mark = ".", decimal.mark = ",")` + `r scales::number(round(mFitT2$coefficients[[2]],4), accuracy = 0.001, big.mark = ".", decimal.mark = ",")` X_i; i = 1, \dots , n.$$
 
 
-$$ \widehat{Y_i}^2 = `r scales::number(round(mFitT2$coefficients[[1]],4), accuracy = 0.001, big.mark = ".", decimal.mark = ",")` + `r scales::number(round(mFitT2$coefficients[[2]],4), accuracy = 0.001, big.mark = ".", decimal.mark = ",")` X_i; i = 1, \dots , n.$$
+$$ \widehat{T_3} = `r scales::number(round(mFitT3$coefficients[[1]],4), accuracy = 0.001, big.mark = ".", decimal.mark = ",")` + `r scales::number(round(mFitT3$coefficients[[2]],4), accuracy = 0.001, big.mark = ".", decimal.mark = ",")` X_i; i = 1, \dots , n.$$
 
 
-A Figura 3 traz os diagramas de dispersão com a reta ajustada para o MRLS sem transformação (Sub. Fig. A) e para cada transformação realizada, a fim de possibilitar uma melhor identificação das diferenças entre cada modelo.
+A Figura 4 traz os diagramas de dispersão com a reta ajustada para o MRLS sem transformação (Sub. Fig. A) e para cada transformação realizada, a fim de possibilitar uma melhor identificação das diferenças entre cada modelo.
 
 
-```{r fig3:transform}
+```{r fig4:transform}
 #| echo: false #true
 #| warning: false
 #| fig-align: center
 #| fig-pos: H
-#| fig-height: 6
-#| fig-width: 7
+#| fig-height: 7
+#| fig-width: 8
 
 d1 <- dados1|>
   ggplot(aes(x = height, y = volume)) +
@@ -377,9 +496,7 @@ d1 <- dados1|>
                                                     decimal.mark = ","))+
   labs(
     title = "Modelo Ajustado entre Y e à Altura",
-    y = 'Volume (m³)',
-    x = 'Altura (m)'
-  )+
+    y = 'Volume (m³)', x = 'Altura (m)')+
   theme_minimal()+
   theme(legend.position = "none",
         plot.title = element_text(size = 11, face = "plain"),
@@ -448,8 +565,7 @@ d3 <- t2|>
   theme(legend.position = "none",
         plot.title = element_text(size = 11, face = "plain"),
         axis.title = element_text(size = 8, face = "plain"),
-        axis.line = element_line(size = 0.5, color = "#222222")
-        )
+        axis.line = element_line(size = 0.5, color = "#222222"))
 
 
 d4 <- t3|>
@@ -468,39 +584,293 @@ d4 <- t3|>
               color = "red", fill="#69b3a2")+
 
   scale_x_continuous(breaks = seq(19,27,1))+
-  scale_y_continuous(breaks = seq(-0.5, 5, 0.75), 
-                     labels = scales::number_format(big.mark = ".", 
-                                                    decimal.mark = ","))+
+  scale_y_continuous(
+    breaks = seq(-0.5, 5, 0.75), 
+    labels = scales::number_format(big.mark = ".", decimal.mark = ","))+
   labs(
     title = "Modelo Ajustado entre Y² e a Altura",
-    y = '[Volume (m³)]²',
-    x = 'Altura (m)'
+    y = '[Volume (m³)]²', x = 'Altura (m)'
   )+
   theme_minimal()+
   theme(legend.position = "none",
         plot.title = element_text(size = 11, face = "plain"),
         axis.title = element_text(size = 8, face = "plain"),
-        axis.line = element_line(size = 0.5, color = "#222222")
-        )
-
-d1 + d2 + d3 + d4 +
-  plot_layout(ncol = 2) +
-  plot_annotation(
-    title = "Figura 3: Modelo ajustado e suas transformações",
-    subtitle = "Comparativo entre o modelo ajustado sem transformação com os modelos após a transformações \nda variável resposta.",
-    tag_levels = c("A", "1"), tag_prefix = "Sub Fig. ",
-    tag_sep = ".", tag_suffix = ":") &
-  theme(
-    legend.position = "none",
-    plot.tag.position = c(0, 1),
-    plot.tag = element_text(size = 6, hjust = 0, vjust = -0.4))
-
+        axis.line = element_line(size = 0.5, color = "#222222"))
 
 ```
 
 
 
-```{r fig4:residuos_transform}
+```{r fig4:plot}
+#| echo: false #true
+#| warning: false
+#| fig-align: center
+#| fig-pos: H
+#| fig-height: 6
+#| fig-width: 8
+
+
+d1 + d2 + d3 + d4 +
+  plot_layout(ncol = 2) +
+  plot_annotation(
+    title = "Figura 4: Modelo ajustado e suas transformações",
+    subtitle = "Comparativo entre o modelo ajustado sem transformação com os modelos após a transformações da variável \nresposta.",
+    tag_levels = c("A", "1"), tag_prefix = "Sub Fig. ",
+    tag_sep = ".", tag_suffix = ":") &
+  theme(
+    legend.position = "none",
+    plot.tag.position = c(0, 1),
+    plot.tag = element_text(size = 8, hjust = 0, vjust = -0.4))
+
+
+```
+
+
+```{r fig5:T1_diagnostico}
+#| echo: false #true
+#| warning: false
+#| fig-align: center
+#| fig-pos: H
+#| fig-height: 4
+#| fig-width: 6
+
+
+# Diagnóstico do Modelo ----
+
+d1 <- mFitT1 |> 
+  ggplot(aes(sample = rstudent(mFitT1))) + 
+  qqplotr::stat_qq_band(alpha = 0.3) +
+  qqplotr::stat_qq_point(color = "#234B6E", shape=1) +
+  qqplotr::stat_qq_line(linetype = 2, size = 0.2) +
+  labs(
+    x = "Quantil Teórico", y = "Quantil Amostral",
+    title = "Q-Q Normal Plot"
+  )+
+  scale_x_continuous(
+    labels = scales::number_format(big.mark = ".", decimal.mark = ","))+
+  scale_y_continuous(
+    breaks = seq(-3, 3, 1),
+    labels = scales::number_format(big.mark = ".", decimal.mark = ","))+
+  theme_minimal()+
+  theme(legend.position = "none",
+    axis.title = element_text(size = 8, face = "plain"),
+    axis.line = element_line(size = 0.8, color = "#222222"))
+
+
+d2 <- mFitT1 |>
+  ggplot2::ggplot(aes(x = height, y = rstudent(mFitT1)))+
+  geom_point(color = "#112446", shape = 1)+
+  geom_hline(yintercept = 0, linetype = 2, size = 0.2) +
+  geom_hline(yintercept = 2, linetype = 2, size = 0.2) +
+  geom_hline(yintercept = -2, linetype = 2, size = 0.2)+
+  labs(
+    title = "Gráfico de Resíduos Jacknife",
+    x = "Altura (m)",
+    y = "Resíduos Jacknife")+
+  scale_x_continuous(
+    breaks = seq(18, 27, 1),
+    labels = scales::number_format(
+      dig.mark = ".", decimal.mark = ","))+
+  scale_y_continuous(
+    breaks = seq(-3.5, 6, .5),
+    labels = scales::number_format(
+      dig.mark = ".", decimal.mark = ","))+
+  theme_minimal()+
+  theme(
+    legend.position = "none",
+    axis.title = element_text(size = 9, face = "plain"),
+    axis.line = element_line(size = 0.5, color = "#222222"))
+
+```
+
+
+```{r fig5:plot}
+#| echo: false #true
+#| warning: false
+#| fig-align: center
+#| fig-pos: H
+#| fig-height: 3
+#| fig-width: 8
+
+(d1+d2) +
+  plot_layout(ncol = 2, byrow = F) +
+  plot_annotation(
+    title = paste("Figura 5: Avaliação dos pressupostos do modelo T1 ajustado"),
+    tag_levels = c("A", "1"), tag_prefix = "Sub Fig. ", tag_sep = ".",
+    tag_suffix = ":") &
+  theme(plot.tag.position = c(0, 1),
+    plot.tag = element_text(size = 8, hjust = 0, vjust = -0.4))
+
+```
+
+
+É possível constatar uma melhora no pressuposto de homoscedasticidade para os resíduos do modelo T1, mas também houve uma maior acentuação do desvio na região central do gráfico de normalidade, contudo os valores permanecem dentro da região de confiança.
+
+
+```{r fig6:T2_diagnostico}
+#| echo: false #true
+#| warning: false
+#| fig-align: center
+#| fig-pos: H
+#| fig-height: 4
+#| fig-width: 6
+
+
+# Diagnóstico do Modelo ----
+
+d1 <- mFitT2 |> 
+  ggplot(aes(sample = rstudent(mFitT2))) + 
+  qqplotr::stat_qq_band(alpha = 0.3) +
+  qqplotr::stat_qq_point(color = "#234B6E", shape=1) +
+  qqplotr::stat_qq_line(linetype = 2, size = 0.2) +
+  labs(
+    x = "Quantil Teórico", y = "Quantil Amostral",
+    title = "Q-Q Normal Plot"
+  )+
+  scale_x_continuous(
+    labels = scales::number_format(big.mark = ".", decimal.mark = ","))+
+  scale_y_continuous(
+    breaks = seq(-3, 3, 1),
+    labels = scales::number_format(big.mark = ".", decimal.mark = ","))+
+  theme_minimal()+
+  theme(legend.position = "none",
+    axis.title = element_text(size = 8, face = "plain"),
+    axis.line = element_line(size = 0.8, color = "#222222"))
+
+
+d2 <- mFitT2 |>
+  ggplot2::ggplot(aes(x = height, y = rstudent(mFitT2)))+
+  geom_point(color = "#112446", shape = 1)+
+  geom_hline(yintercept = 0, linetype = 2, size = 0.2) +
+  geom_hline(yintercept = 2, linetype = 2, size = 0.2) +
+  geom_hline(yintercept = -2, linetype = 2, size = 0.2)+
+  labs(
+    title = "Gráfico de Resíduos Jacknife",
+    x = "Altura (m)",
+    y = "Resíduos Jacknife")+
+  scale_x_continuous(
+    breaks = seq(18, 27, 1),
+    labels = scales::number_format(
+      dig.mark = ".", decimal.mark = ","))+
+  scale_y_continuous(
+    breaks = seq(-3.5, 6, .5),
+    labels = scales::number_format(
+      dig.mark = ".", decimal.mark = ","))+
+  theme_minimal()+
+  theme(
+    legend.position = "none",
+    axis.title = element_text(size = 9, face = "plain"),
+    axis.line = element_line(size = 0.5, color = "#222222"))
+
+```
+
+
+```{r fig6:plot}
+#| echo: false #true
+#| warning: false
+#| fig-align: center
+#| fig-pos: H
+#| fig-height: 3
+#| fig-width: 8
+
+(d1+d2) +
+  plot_layout(ncol = 2, byrow = F) +
+  plot_annotation(
+    title = paste("Figura 6: Avaliação dos pressupostos do modelo T2 ajustado"),
+    tag_levels = c("A", "1"), tag_prefix = "Sub Fig. ", tag_sep = ".",
+    tag_suffix = ":") &
+  # theme_classic() &
+  theme(plot.tag.position = c(0, 1),
+    plot.tag = element_text(size = 8, hjust = 0, vjust = -0.4))
+```
+
+
+Assim como no modelo anterior, o modelo T2 apresenta uma melhora no pressuposto de homoscedasticidade para os resíduo, mas também houve uma maior acentuação do desvio na região central do gráfico de normalidade, contudo os valores permanecem dentro da região de confiança.
+
+
+```{r fig7:T3_diagnostico}
+#| echo: false #true
+#| warning: false
+#| fig-align: center
+#| fig-pos: H
+#| fig-height: 4
+#| fig-width: 6
+
+
+# Diagnóstico do Modelo ----
+
+d1 <- mFitT3 |> 
+  ggplot(aes(sample = rstudent(mFitT3))) + 
+  qqplotr::stat_qq_band(alpha = 0.3) +
+  qqplotr::stat_qq_point(color = "#234B6E", shape=1) +
+  qqplotr::stat_qq_line(linetype = 2, size = 0.2) +
+  labs(
+    x = "Quantil Teórico", y = "Quantil Amostral",
+    title = "Q-Q Normal Plot"
+  )+
+  scale_x_continuous(
+    labels = scales::number_format(big.mark = ".", decimal.mark = ","))+
+  scale_y_continuous(
+    breaks = seq(-3, 6, 1),
+    labels = scales::number_format(big.mark = ".", decimal.mark = ","))+
+  theme_minimal()+
+  theme(legend.position = "none",
+    axis.title = element_text(size = 8, face = "plain"),
+    axis.line = element_line(size = 0.8, color = "#222222"))
+
+
+d2 <- mFitT3 |>
+  ggplot2::ggplot(aes(x = height, y = rstudent(mFitT3)))+
+  geom_point(color = "#112446", shape = 1)+
+  geom_hline(yintercept = 0, linetype = 2, size = 0.2) +
+  geom_hline(yintercept = 2, linetype = 2, size = 0.2) +
+  geom_hline(yintercept = -2, linetype = 2, size = 0.2)+
+  labs(
+    title = "Gráfico de Resíduos Jacknife",
+    x = "Altura (m)",
+    y = "Resíduos Jacknife")+
+  scale_x_continuous(
+    breaks = seq(18, 27, 1),
+    labels = scales::number_format(
+      dig.mark = ".", decimal.mark = ","))+
+  scale_y_continuous(
+    breaks = seq(-3.5, 6, .5),
+    labels = scales::number_format(
+      dig.mark = ".", decimal.mark = ","))+
+  theme_minimal()+
+  theme(
+    legend.position = "none",
+    axis.title = element_text(size = 9, face = "plain"),
+    axis.line = element_line(size = 0.5, color = "#222222"))
+
+```
+
+
+```{r fig7:plot}
+#| echo: false #true
+#| warning: false
+#| fig-align: center
+#| fig-pos: H
+#| fig-height: 3
+#| fig-width: 8
+
+(d1+d2) +
+  plot_layout(ncol = 2, byrow = F) +
+  plot_annotation(
+    title = paste("Figura 7: Avaliação dos pressupostos do modelo T3 ajustado"),
+    tag_levels = c("A", "1"), tag_prefix = "Sub Fig. ", tag_sep = ".",
+    tag_suffix = ":") &
+  theme(plot.tag.position = c(0, 1),
+    plot.tag = element_text(size = 8, hjust = 0, vjust = -0.4))
+```
+
+
+Para o modelo T3 se constata a evidenciação de um ponto atípico ( _outlier_ ), sendo este influente o suficiente para interferir na variabilidade total deste modelo, portanto este modelo transformado foi descartado pela quebra do pressuposto da homogeneidade de variâncias.
+Dentre os modelos sob a transformação restantes ($\sqrt{Y}$ e $log(Y)$), o modelo sob a transformação $log(Y)$ (T2) apresenta uma maior homogeneidade de variância, sendo o mais adequado dentre os modelos transformados.
+
+
+
+```{r fig5:residuos_transform}
 #| echo: false #true
 #| warning: false
 #| fig-align: center
@@ -514,86 +884,96 @@ mFitT1_resid <- broom::augment(mFitT1)
 mFitT2_resid <- broom::augment(mFitT2)
 mFitT3_resid <- broom::augment(mFitT3)
 
-d1 <- mFitT1 |>
-  ggplot(aes(x = height, y = rstudent(mFitT1))) + 
-  geom_point(shape=1, color = "#112446") +
-  geom_hline(aes(yintercept = 0), col="red")+
-  labs(
-    x = "Altura (m)", y = "Resíduos Estudentizados",
-    title = expression(sqrt("Y")))+
-  scale_x_continuous(
-    breaks = seq(19, 27, 1),
-    labels = scales::number_format(big.mark = ".", decimal.mark = ","))+
-  scale_y_continuous(
-    breaks = seq(-3, 3, 1),
-    labels = scales::number_format(big.mark = ".", decimal.mark = ","))+
-  theme_minimal()+
-  theme(
-    legend.position = "none",
-    plot.title = element_text(size = 11, face = "plain"),
-    axis.title = element_text(size = 8, face = "plain"),
-    axis.line = element_line(size = 0.5, color = "#222222"))
+# d1 <- mFitT1 |>
+#   ggplot(aes(x = height, y = rstudent(mFitT1))) + 
+#   geom_point(shape=1, color = "#112446") +
+#   geom_hline(aes(yintercept = 0), col="red")+
+#   labs(
+#     x = "Altura (m)", y = "Resíduos Estudentizados",
+#     title = expression(sqrt("Y")))+
+#   scale_x_continuous(
+#     breaks = seq(19, 27, 1),
+#     labels = scales::number_format(big.mark = ".", decimal.mark = ","))+
+#   scale_y_continuous(
+#     breaks = seq(-3, 3, 1),
+#     labels = scales::number_format(big.mark = ".", decimal.mark = ","))+
+#   theme_minimal()+
+#   theme(
+#     legend.position = "none",
+#     plot.title = element_text(size = 11, face = "plain"),
+#     axis.title = element_text(size = 8, face = "plain"),
+#     axis.line = element_line(size = 0.5, color = "#222222"))
+# 
+# 
+# d2 <- mFitT2 |>
+#   ggplot(aes(x = height, y = rstudent(mFitT2))) + 
+#   geom_point(shape=1, color = "#112446") +
+#   geom_hline(aes(yintercept = 0), col="red")+
+#   labs(
+#     x = "Altura (m)", y = "Resíduos Estudentizados",
+#     title = expression(log("Y")))+
+#   scale_x_continuous(
+#     breaks = seq(19, 27, 1),
+#     labels = scales::number_format(big.mark = ".", decimal.mark = ","))+
+#   scale_y_continuous(
+#     breaks = seq(-2, 2, 1),
+#     labels = scales::number_format(big.mark = ".", decimal.mark = ","))+
+#   theme_minimal()+
+#   theme(
+#     legend.position = "none",
+#     plot.title = element_text(size = 11, face = "plain"),
+#     axis.title = element_text(size = 8, face = "plain"),
+#     axis.line = element_line(size = 0.5, color = "#222222"))
+# 
+# 
+# d3 <- mFitT3 |>
+#   ggplot(aes(x = height, y = rstudent(mFitT3))) + 
+#   geom_point(shape=1, color = "#112446") +
+#   geom_hline(aes(yintercept = 0), col="red")+
+#   labs(
+#     x = "Altura (m)", y = "Resíduos Estudentizados",
+#     title = "Y²")+
+#   scale_x_continuous(
+#     breaks = seq(19, 27, 1),
+#     labels = scales::number_format(big.mark = ".", decimal.mark = ","))+
+#   scale_y_continuous(
+#     breaks = seq(-1, 4, 1),
+#     labels = scales::number_format(big.mark = ".", decimal.mark = ","))+
+#   theme_minimal()+
+#   theme(
+#     legend.position = "none",
+#     plot.title = element_text(size = 11, face = "plain"),
+#     axis.title = element_text(size = 8, face = "plain"),
+#     axis.line = element_line(size = 0.5, color = "#222222"))
+
+```
 
 
-d2 <- mFitT2 |>
-  ggplot(aes(x = height, y = rstudent(mFitT2))) + 
-  geom_point(shape=1, color = "#112446") +
-  geom_hline(aes(yintercept = 0), col="red")+
-  labs(
-    x = "Altura (m)", y = "Resíduos Estudentizados",
-    title = expression(log("Y")))+
-  scale_x_continuous(
-    breaks = seq(19, 27, 1),
-    labels = scales::number_format(big.mark = ".", decimal.mark = ","))+
-  scale_y_continuous(
-    breaks = seq(-2, 2, 1),
-    labels = scales::number_format(big.mark = ".", decimal.mark = ","))+
-  theme_minimal()+
-  theme(
-    legend.position = "none",
-    plot.title = element_text(size = 11, face = "plain"),
-    axis.title = element_text(size = 8, face = "plain"),
-    axis.line = element_line(size = 0.5, color = "#222222"))
+```{r fig5.1:plot}
+#| echo: false #true
+#| warning: false
+#| eval: false
+#| fig-align: center
+#| fig-pos: H
+#| fig-height: 6
+#| fig-width: 7
 
 
-d3 <- mFitT3 |>
-  ggplot(aes(x = height, y = rstudent(mFitT3))) + 
-  geom_point(shape=1, color = "#112446") +
-  geom_hline(aes(yintercept = 0), col="red")+
-  labs(
-    x = "Altura (m)", y = "Resíduos Estudentizados",
-    title = "Y²")+
-  scale_x_continuous(
-    breaks = seq(19, 27, 1),
-    labels = scales::number_format(big.mark = ".", decimal.mark = ","))+
-  scale_y_continuous(
-    breaks = seq(-1, 4, 1),
-    labels = scales::number_format(big.mark = ".", decimal.mark = ","))+
-  theme_minimal()+
-  theme(
-    legend.position = "none",
-    plot.title = element_text(size = 11, face = "plain"),
-    axis.title = element_text(size = 8, face = "plain"),
-    axis.line = element_line(size = 0.5, color = "#222222"))
-
-
-d1 + d2 + d3 + 
-  plot_layout(ncol = 2) +
-  plot_annotation(
-    title = "Figura 4: Gráficos dos Resíduos Estudentizados vs. Variável Explicativa.",
-    tag_levels = c("A", "1"), tag_prefix = "Sub Fig. ",
-    tag_sep = ".", tag_suffix = ":") &
-  theme(
-    legend.position = "none",
-    plot.tag.position = c(0, 1),
-    plot.tag = element_text(size = 6, hjust = 0, vjust = -0.4))
+# d1 + d2 + d3 + 
+#   plot_layout(ncol = 2) +
+#   plot_annotation(
+#     title = "Figura 5: Gráficos dos Resíduos Estudentizados vs. Variável Explicativa.",
+#     tag_levels = c("A", "1"), tag_prefix = "Sub Fig. ",
+#     tag_sep = ".", tag_suffix = ":") &
+#   theme(
+#     legend.position = "none",
+#     plot.tag.position = c(0, 1),
+#     plot.tag = element_text(size = 6, hjust = 0, vjust = -0.4))
 
 
 ```
 
 
-A Figura 4 traz os gráficos comparativos dos resíduos estudentizados (*Jacknife*) versus variável explicativa, sendo possível constatar que houve uma aparente melhora na variabilidade nas Sub.Figs. A e B, também se percebe uma maior evidenciação do ponto atípico na Sub.Fig. C, sendo este influente o suficiente para interferir na variabilidade total deste modelo, portanto este modelo transformado foi descartado pela quebra do pressuposto da homogeneidade de variâncias.
-Dentre os modelos sob a transformação restantes ($\sqrt{Y}$ e $log(Y)$), o modelo sob a transformação $log(Y)$ (Sub.Fig. B) apresenta uma maior homogeneidade de variância, sendo o mais adequado dentre os modelos transformados.
 
 Como forma de corroborar com a avaliação feita sobre a análise gráfica, foi construída a Tabela 2 com os testes de diagnósticos dos resíduos do modelo sob a transformação escolhida ($log(Y)$).
 
@@ -660,10 +1040,12 @@ Para tanto a Figura 5 foi construída com base na função de $\lambda$ para a e
 
 
 ```{r fig5:box-cox}
-#| echo: false
+#| echo: false #true
 #| warning: false
-#| fig-width: 7
+#| fig-align: center
+#| fig-pos: H
 #| fig-height: 4
+#| fig-width: 7
 
 par(mfrow = c(1, 1), mar=c(4,4,2,1), oma=c(1.5,1,1.5,1))
 bc <- MASS::boxcox(mFit, lambda = seq(-1, 1, 1/10), ylab = "log-Verossimilhança")

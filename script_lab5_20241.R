@@ -103,7 +103,7 @@ dados1 |>
 
 dados1 |> 
   ggplot() +
-  aes(x = age) +
+  aes(x = height) +
   # geom_histogram(aes(y=..density..), bins = 30L, fill = "#112446", colour="white") +
   geom_density(alpha=.6, fill="darkblue", color = "white") +
   geom_vline(
@@ -834,6 +834,7 @@ dplyr::glimpse(mFit_resid)
 mFit_resid |> filter(.std.resid<=-3)
 mFit_resid |> filter(.std.resid>=2)
 
+mFit_resid$.std.resid
 
 library(ggthemes)
 
@@ -843,26 +844,25 @@ library(ggthemes)
 p1 <- mFit|>
   ggplot2::ggplot(aes(x = rstudent(mFit)))+
   geom_histogram(aes(y = ..density..), fill = "#112446", 
-                 color = "#112446", binwidth = 0.7, alpha = 0.5)+
-  # geom_density(
-  #   # fill = "red", 
-  #   alpha = 0.2)+
-  # stat_function(fun = dnorm, 
-  #               args = (list(
-  #                   mean = mean(rstudent(mFit)), 
-  #                   sd = sd(rstudent(mFit)))), 
-  #               # geom = "polygon", 
-  #               # fill = "blue", 
-  #               # alpha = 0.2,
-  #               # color = "black", 
-#               size = 0.5)+
+                 color = "#112446", binwidth = 0.3, alpha = 0.5)+
+geom_density(
+  # fill = "red",
+  alpha = 0.2)+
+stat_function(
+  fun = dnorm,
+  args = (list(mean = mean(rstudent(mFit)), sd = sd(rstudent(mFit)))),
+              # geom = "polygon",
+              # fill = "blue",
+              # alpha = 0.2,
+              # color = "black",
+              size = 0.5)+
 geom_vline(
   # show.legend = T,
   xintercept = mean(rstudent(mFit)),
   color = "red",
   linetype = "dashed" # "dotted"
 ) +
-  annotate("text", x = 0.3, y = 0.5,
+  annotate("text", x = 0.2, y = 0.55,
            label = "Média",
            size=3, color="red")+
   geom_vline(
@@ -870,15 +870,14 @@ geom_vline(
     color = "blue",
     linetype = "dashed"
   ) +
-  annotate("text", x = -0.3, y = 0.5,
-           label = "Mediana",
-           size=3, color="blue")+
+  annotate("text", x = -0.45, y = 0.55,
+           label = "Mediana", size=3, color="blue")+
   labs(
-    x = "Resíduos Estudentizados",
-    y = "Densidade",
+    x = "Resíduos Estudentizados", y = "Densidade",
     title = "Histograma dos Resíduos Estudentizados (Jacknife)"
   )+
-  scale_x_continuous(breaks = seq(-6, 4, 1))+
+  scale_x_continuous()+
+    # breaks = seq(-6, 4, 1))+
   # scale_y_continuous(
   #   labels = scales::number_format(
   #     big.mark = ".", decimal.mark = ","
@@ -971,14 +970,14 @@ mFit_resid|>
   geom_boxplot(col="#112446", fill="#112446", alpha = 0.5)+
   stat_summary(fun="mean", geom="point", 
                shape=18, size=2, color = "tomato")+
-  annotate("text", x = 0.95, y = 2.4, label = "2,40",
-           size=3, color="#112446")+
-  annotate("text", x = 0.95, y = -3.12, label = "-3,12",
-           size=3, color="#112446")+
-  annotate("text", x = 0.95, y = -3.76, label = "-3,76",
-           size=3, color="#112446")+
-  annotate("text", x = 0.95, y = -4.36, label = "-4,36",
-           size=3, color="#163C82")+
+  # annotate("text", x = 0.95, y = 2.4, label = "2,40",
+  #          size=3, color="#112446")+
+  # annotate("text", x = 0.95, y = -3.12, label = "-3,12",
+  #          size=3, color="#112446")+
+  # annotate("text", x = 0.95, y = -3.76, label = "-3,76",
+  #          size=3, color="#112446")+
+  # annotate("text", x = 0.95, y = -4.36, label = "-4,36",
+  #          size=3, color="#163C82")+
   labs(title = "Box-Plot", x="", y = "Resíduos Estudentizados")+
   scale_y_continuous(
     breaks = seq(-6, 4, 1),
@@ -997,7 +996,7 @@ d1 <- mFit_resid|>
   geom_hline(yintercept = 0, linetype = 2, size = 0.2) +
   geom_smooth(
     # aes(linewidth=0.01),
-    linewidth=3,
+    linewidth=1,
     se = T, color = "tomato", method = 'loess', formula = 'y ~ x')+
   labs(
     x = "Valores Médios Ajustados",
@@ -1017,12 +1016,11 @@ d1 <- mFit_resid|>
     legend.position = "none",
     # plot.title = element_text(size = 11, face = "bold"),
     # axis.title = element_text(size = 8, face = "plain"),
-    axis.line = element_line(size = 0.8, color = "#222222")
-  )
+    axis.line = element_line(size = 0.8, color = "#222222"))
 
 
 ##### Gráfico de normalidade dos resíduos ----
-d2 <- mFit_resid %>% 
+d2 <- mFit_resid |> 
   ggplot(aes(sample = .std.resid)) + 
   qqplotr::stat_qq_band(alpha = 0.3) + # Plota a banda de confiança
   qqplotr::stat_qq_point(color = "#234B6E", shape=15) + # Plota os pontos
@@ -1030,8 +1028,10 @@ d2 <- mFit_resid %>%
   labs(
     x = "Quantil Teórico",
     y = "Quantil Amostral",
-    title = "Q-Q normal"
-    # title = "Gráfico quantil-quantil normal"
+    # title = glue::glue('{expression(4))} teste')
+    # title = paste(expression(sqrt('Volume (m³)')),"Figura 3: Avaliação dos pressupostos do modelo T1", expression(sqrt('Volume (m³)')))
+    # title = "Q-Q Normal Plot"
+    title = "Gráfico quantil-quantil normal"
   )+
   # scale_x_continuous(breaks = seq(-3,3,1))+
   scale_x_continuous(
@@ -1136,7 +1136,7 @@ d3 <- mFit_resid %>%
 #     axis.line = element_line(size = 0.5, color = "#222222"))
 
 d4 <- mFit|>
-  ggplot2::ggplot(aes(x = age, y = rstudent(mFit)))+
+  ggplot2::ggplot(aes(x = height, y = rstudent(mFit)))+
   geom_point(color = "#234B6E", shape = 1)+
   geom_hline(yintercept = 0, linetype = 2, size = 0.2) +
   geom_hline(yintercept = 2, linetype = 2, size = 0.2) +
@@ -1146,11 +1146,11 @@ d4 <- mFit|>
     x = "Idade Gestacional",
     y = "Resíduos Jacknife")+
   scale_x_continuous(
-    breaks = seq(10, 45, 2.5),
+    # breaks = seq(10, 45, 2.5),
     labels = scales::number_format(
       dig.mark = ".", decimal.mark = ","))+
   scale_y_continuous(
-    breaks = seq(-4, 3, 1),
+    # breaks = seq(-4, 3, 1),
     labels = scales::number_format(
       dig.mark = ".", decimal.mark = ","))+
   theme_minimal()+
